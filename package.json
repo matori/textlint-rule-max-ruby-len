@@ -24,6 +24,10 @@
     "lib": "lib",
     "test": "test"
   },
+  "files": [
+    "lib/",
+    "src/"
+  ],
   "homepage": "https://github.com/matori/textlint-rule-max-ruby-len#readme",
   "keywords": [
     "ruby",

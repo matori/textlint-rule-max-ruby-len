@@ -28,9 +28,9 @@ npm install textlint-rule-max-ruby-len
 {
   "rules": {
     "max-ruby-len": {
-      rubyBase: 10,
-      rubyText: 10,
-      useStringLength: false
+      "rubyBase": 10,
+      "rubyText": 10,
+      "useStringLength": false
     },
   }
 }
@@ -41,7 +41,7 @@ npm install textlint-rule-max-ruby-len
   ルビ親文字の最大文字数。
 - `rubyText`: `number`  
   default: `10`  
-  ルビ親文字の最大文字数。
+  ルビ文字の最大文字数。
 - `useStringLength`: `boolean`  
   default: `false`  
   文字の数え方。  

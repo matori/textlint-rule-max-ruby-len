@@ -36,7 +36,8 @@
     "textlintrule"
   ],
   "license": "MIT",
-  "main": "lib/index.js",
+  "main": "lib/textlint-rule-max-ruby-len.js",
+  "types": "lib/textlint-rule-max-ruby-len.d.ts",
   "peerDependencies": {
     "textlint": ">= 5.6.0"
   },

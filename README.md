@@ -2,7 +2,7 @@
 
 ルビ親文字とルビ文字の文字数を制限する[textlint](https://github.com/textlint/textlint)ルールです。
 
-[textlint-plugin-jawn](https://github.com/matori/jawn-fs)との併用を想定しています。
+[textlint-plugin-jawn](https://github.com/matori/textlint-plugin-jawn)との併用を想定しています。
 
 ## インストール
 

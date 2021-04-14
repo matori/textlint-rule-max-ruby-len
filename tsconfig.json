@@ -1,9 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "textlint-plugin-jawn": ["node_modules/textlint-plugin-jawn"]
-    },
     /* Basic Options */
     "module": "commonjs",
     "moduleResolution": "node",

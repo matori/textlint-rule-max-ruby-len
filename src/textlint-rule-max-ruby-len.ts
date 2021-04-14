@@ -11,7 +11,7 @@ const defaultOptions = {
 const module: TextlintRuleModule = (context, options = {}) => {
   const { Syntax, RuleError, report } = context;
   const rubyBaseMax = options.rubyBase ? options.rubyBase : defaultOptions.rubyBase;
-  const rubyTextMax = options.rubyTextMax ? options.rubyTextMax : defaultOptions.rubyText;
+  const rubyTextMax = options.rubyText ? options.rubyText : defaultOptions.rubyText;
   const useStringLength = typeof options.useStringLength === 'boolean'
     ? options.useStringLength
     : defaultOptions.useStringLength;

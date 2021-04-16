@@ -1,7 +1,7 @@
 {
   "name": "textlint-rule-max-ruby-len",
   "description": "textlint rule that limit max length of ruby-base and ruby-text.",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "author": "matori <pnr.matori@gmail.com> (https://github.com/matori)",
   "bugs": {
     "url": "https://github.com/matori/textlint-rule-max-ruby-len/issues"

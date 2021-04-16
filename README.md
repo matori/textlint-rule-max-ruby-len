@@ -2,7 +2,12 @@
 
 ルビ親文字とルビ文字の文字数を制限する[textlint](https://github.com/textlint/textlint)ルールです。
 
-[textlint-plugin-jawn](https://github.com/matori/textlint-plugin-jawn)との併用を想定しています。
+対応しているルビ構文は次のとおりです。
+
+```
+｜親文字《ルビ》
+|親文字《ルビ》
+```
 
 ## インストール
 

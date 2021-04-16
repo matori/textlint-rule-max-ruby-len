@@ -1,6 +1,7 @@
 'use strict';
 import { TextlintRuleModule } from '@textlint/types';
-import { TxtNode } from '@textlint/ast-node-types';
+import { RuleHelper } from 'textlint-rule-helper';
+import { matchCaptureGroupAll } from 'match-index';
 
 const defaultOptions = {
   rubyBase: 10,
@@ -8,36 +9,108 @@ const defaultOptions = {
   useStringLength: false,
 };
 
+// 正規表現作成用の定数
+// @see https://github.com/matori/jawn-to-ast/blob/main/src/constants.ts
+
+// ルビ親文字
+const RUBY_BASE_SYMBOL_START_CHARS = ['|', '｜'];
+
+// ルビテキスト
+const RUBY_TEXT_SYMBOL_START = '《';
+const RUBY_TEXT_SYMBOL_END = '》';
+
+// エスケープ用の文字
+const ESCAPE_CHARS = ['|', '｜'];
+
+// 正規表現
+// @see https://github.com/matori/jawn-to-ast/blob/main/src/patterns.ts
+
+const escapeChars = ESCAPE_CHARS.join('');
+const rubyBaseStartChars = RUBY_BASE_SYMBOL_START_CHARS.join('');
+
+const rubyBasePatternBase = [
+  `[${rubyBaseStartChars}]`,
+  `([^${escapeChars}]+?)`,
+  `(?<!${RUBY_TEXT_SYMBOL_START})`,
+  RUBY_TEXT_SYMBOL_START,
+  `.+?`,
+  RUBY_TEXT_SYMBOL_END,
+].join('');
+
+const rubyTextPatternBase = [
+  `[${rubyBaseStartChars}]`,
+  `[^${escapeChars}]+?`,
+  `(?<!${RUBY_TEXT_SYMBOL_START})`,
+  RUBY_TEXT_SYMBOL_START,
+  `(.+?)`,
+  RUBY_TEXT_SYMBOL_END,
+].join('');
+
+const rubyBasePattern = new RegExp(rubyBasePatternBase, 'g');
+const rubyTextPattern = new RegExp(rubyTextPatternBase, 'g');
+
+// node type
+const RubyBase = 'RubyBase';
+const RubyText = 'RubyText';
+
 const module: TextlintRuleModule = (context, options = {}) => {
-  const { Syntax, RuleError, report } = context;
+  const helper = new RuleHelper(context);
+  const { Syntax, getSource, RuleError, report } = context;
   const rubyBaseMax = options.rubyBase ? options.rubyBase : defaultOptions.rubyBase;
   const rubyTextMax = options.rubyText ? options.rubyText : defaultOptions.rubyText;
   const useStringLength = typeof options.useStringLength === 'boolean'
     ? options.useStringLength
     : defaultOptions.useStringLength;
-  const RubyBase = 'RubyBase';
-  const RubyText = 'RubyText';
+  const ignoreNodes = [
+    Syntax.BlockQuote,
+    Syntax.CodeBlock,
+    Syntax.Comment,
+    Syntax.Image,
+    Syntax.Code,
+  ];
   return {
-    [Syntax.Str](node) {
-      const text = node.value;
-      const len = getLength(text, useStringLength);
-      if (isNodeWrapped(node, [RubyBase])) {
+    [Syntax.Str](node): void {
+      // 無視するノードの子孫なら何もしない
+      if (helper.isChildNode(node, ignoreNodes)) {
+        return;
+      }
+
+      if (helper.isChildNode(node, [RubyBase])) { // RubyBaseノード
+        const text = node.value;
+        const len = getLength(text, useStringLength);
         if (len > rubyBaseMax) {
-          report(
-            node,
-            new RuleError(`ルビ親文字が長すぎます: ${len}文字 / ${rubyBaseMax}文字`),
-          );
+          const ruleError = new RuleError(createErrorMesage(RubyBase, len, rubyBaseMax));
+          report(node, ruleError);
         }
-      }
-      if (isNodeWrapped(node, [RubyText])) {
+      } else if (helper.isChildNode(node, [RubyText])) { // RubyTextノード
+        const text = node.value;
+        const len = getLength(text, useStringLength);
         if (len > rubyTextMax) {
-          report(
-            node,
-            new RuleError(`ルビ文字が長すぎます: ${len}文字 / ${rubyTextMax}文字`),
-          );
+          const ruleError = new RuleError(createErrorMesage(RubyText, len, rubyBaseMax));
+          report(node, ruleError);
         }
+      } else {
+        // RubyBaseやRubyTextのノードタイプを持たないASTに対しての処理
+        // JAWNのRubyノード外のテキストが引っかかったらjawn-to-astのパースがおかしい
+        const source = getSource(node);
+        const rubyBaseCaptureGroups = matchCaptureGroupAll(source, rubyBasePattern);
+        const rubyTextCaptureGroups = matchCaptureGroupAll(source, rubyTextPattern);
+        rubyBaseCaptureGroups.forEach(({ text, index }) => {
+          const len = getLength(text, useStringLength);
+          if (len > rubyBaseMax) {
+            const ruleError = new RuleError(createErrorMesage(RubyBase, len, rubyBaseMax), { index });
+            report(node, ruleError);
+          }
+        });
+        rubyTextCaptureGroups.forEach(({ text, index }) => {
+          const len = getLength(text, useStringLength);
+          if (len > rubyTextMax) {
+            const ruleError = new RuleError(createErrorMesage(RubyText, len, rubyBaseMax), { index });
+            report(node, ruleError);
+          }
+        });
       }
-    }
+    },
   };
 };
 
@@ -48,39 +121,14 @@ function getLength(text: string, useStringLength: boolean): number {
   return [...text].length;
 }
 
-/**
- * Get parents of node.
- * The parent nodes are returned in order from the closest parent to the outer ones.
- * @param node
- * @returns {Array}
- */
-function getParents(node: TxtNode): TxtNode[] {
-  const result = [];
-  // child node has `parent` property.
-  let parent = node.parent;
-  while (parent != null) {
-    result.push(parent);
-    parent = parent.parent;
+function createErrorMesage(type: string, len: number, max: number): string {
+  if (type === RubyBase) {
+    return `ルビ親文字が長すぎます: ${len}文字 / ${max}文字`;
   }
-  return result;
-}
-
-/**
- * Return true if `node` is wrapped any one of `types`.
- * @param {TxtNode} node is target node
- * @param {string[]} types are wrapped target node
- * @returns {boolean|*}
- */
-function isNodeWrapped(node: TxtNode, types: string[]): boolean {
-  const parents = getParents(node);
-  const parentsTypes = parents.map(function(parent) {
-    return parent.type;
-  });
-  return types.some(function(type) {
-    return parentsTypes.some(function(parentType) {
-      return parentType === type;
-    });
-  });
+  if (type === RubyText) {
+    return `ルビ文字が長すぎます: ${len}文字 / ${max}文字`;
+  }
+  return `${len}文字 / ${max}文字`;
 }
 
 export default module;
